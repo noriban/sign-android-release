@@ -1,6 +1,6 @@
 {
   "name": "sign-android-release",
-  "version": "1.0.4",
+  "version": "5",
   "private": true,
   "description": "GitHub action used to sign Android release packages",
   "main": "lib/main.js",
