@@ -4,16 +4,6 @@ import * as io from '@actions/io';
 import * as path from "path";
 import * as fs from "fs";
 
-/**
- * Signs an APK file.
- *
- * @param apkFile - The APK file to sign.
- * @param signingKeyFile - The signing key file.
- * @param alias - The alias for the key.
- * @param keyStorePassword - The keystore password.
- * @param keyPassword - The key password (optional).
- * @returns The path to the signed APK file.
- */
 export async function signApkFile(
     apkFile: string,
     signingKeyFile: string,
@@ -24,7 +14,7 @@ export async function signApkFile(
     try {
         core.debug("Zipaligning APK file");
 
-        const buildToolsPath = getBuildToolsPath();
+        const buildToolsPath = await getBuildToolsPath();
         const zipAlign = path.join(buildToolsPath, 'zipalign');
         core.debug(`Found 'zipalign' @ ${zipAlign}`);
 
@@ -47,16 +37,6 @@ export async function signApkFile(
     }
 }
 
-/**
- * Signs an AAB file.
- *
- * @param aabFile - The AAB file to sign.
- * @param signingKeyFile - The signing key file.
- * @param alias - The alias for the key.
- * @param keyStorePassword - The keystore password.
- * @param keyPassword - The key password (optional).
- * @returns The path to the signed AAB file.
- */
 export async function signAabFile(
     aabFile: string,
     signingKeyFile: string,
@@ -87,20 +67,37 @@ export async function signAabFile(
     }
 }
 
-/**
- * Gets the path to the Android build tools.
- *
- * @returns The build tools path.
- */
-function getBuildToolsPath(): string {
-    const buildToolsVersion = core.getInput('buildToolsVersion') || process.env.ANDROID_BUILD_TOOLS_VERSION || '35.0.0';
+async function getBuildToolsPath(): Promise<string> {
     const androidHome = process.env.ANDROID_HOME;
 
     if (!androidHome) {
         throw new Error('ANDROID_HOME environment variable is not set.');
     }
 
-    const buildToolsPath = path.join(androidHome, `build-tools/${buildToolsVersion}`);
+    const buildToolsDir = path.join(androidHome, 'build-tools');
+    let buildToolsVersion = '';
+
+    if (!(core.getInput('buildToolsVersion') || process.env.ANDROID_BUILD_TOOLS_VERSION)) {
+        console.log("Build tools version is not specified. AUTO-DETECTING...")
+        try {
+            const options = {
+                listeners: {
+                    stdout: (data: Buffer) => {
+                        buildToolsVersion += data.toString();
+                    }
+                }
+            };
+            
+            await exec.exec('ls', [buildToolsDir], options);
+            const versions = buildToolsVersion.trim().split('\n');
+            buildToolsVersion = versions[versions.length - 1];
+            console.log("Found! Build tools version", buildToolsVersion)
+        } catch (error) {
+            throw new Error('Failed to detect Android build tools version.');
+        }
+    }
+
+    const buildToolsPath = path.join(buildToolsDir, buildToolsVersion);
 
     if (!fs.existsSync(buildToolsPath)) {
         throw new Error(`Couldn't find the Android build tools @ ${buildToolsPath}`);
@@ -109,13 +106,6 @@ function getBuildToolsPath(): string {
     return buildToolsPath;
 }
 
-/**
- * Aligns an APK file using zipalign.
- *
- * @param apkFile - The APK file to align.
- * @param zipAlign - The path to the zipalign executable.
- * @returns The path to the aligned APK file.
- */
 async function alignApkFile(apkFile: string, zipAlign: string): Promise<string> {
     const alignedApkFile = apkFile.replace('.apk', '-aligned.apk');
 
@@ -133,19 +123,6 @@ async function alignApkFile(apkFile: string, zipAlign: string): Promise<string> 
     return alignedApkFile;
 }
 
-/**
- * Signs a file using apksigner or jarsigner.
- *
- * @param signerPath - The path to the signer executable.
- * @param fileToSign - The file to sign.
- * @param signingKeyFile - The signing key file.
- * @param alias - The alias for the key.
- * @param keyStorePassword - The keystore password.
- * @param keyPassword - The key password (optional).
- * @param originalFile - The original file to be signed.
- * @param fileExtension - The extension to use for the signed file.
- * @returns The path to the signed file.
- */
 async function signFile(
     signerPath: string,
     fileToSign: string,
@@ -173,12 +150,6 @@ async function signFile(
     return signedFile;
 }
 
-/**
- * Verifies a signed file.
- *
- * @param signerPath - The path to the signer executable.
- * @param signedFile - The signed file to verify.
- */
 async function verifySignedFile(signerPath: string, signedFile: string): Promise<void> {
     await exec.exec(`"${signerPath}"`, [
         'verify',

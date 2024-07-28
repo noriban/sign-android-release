@@ -1,17 +1,17 @@
-name: 'Sign Android'
+name: 'Sign And Align Android Releases'
 description: 'An action to sign an Android release APK or AAB'
-author: 'r0adkll'
+author: 'NoCrypt'
 branding:
   icon: 'edit'
-  color: 'orange'
+  color: 'blue'
 inputs:
-  releaseDirectory:
+  releaseDir:
     description: 'The directory to find your release to sign'
     required: true
-  signingKeyBase64:
+  signingKey:
     description: 'The key used to sign your release in base64 encoded format'
     required: true
-  alias:
+  keyAlias:
     description: 'The key alias'
     required: true
   keyStorePassword:
@@ -19,6 +19,9 @@ inputs:
     required: true
   keyPassword:
     description: 'The password for the key'
+    required: false
+  buildToolsVersion:
+    description: 'Prefered Android build tools to use'
     required: false
 runs:
   using: 'node20'

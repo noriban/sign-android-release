@@ -24,7 +24,6 @@ steps:
       keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
       keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      buildToolsVersion: 35.0.0
 
   # Upload your signed file if you want
   - uses: actions/upload-artifact@v3
@@ -45,7 +44,6 @@ steps:
       keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
       keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      buildToolsVersion: 35.0.0
 
   - uses: jungwinter/split@v2
     id: signed_files
@@ -80,7 +78,6 @@ steps:
       keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
       keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      buildToolsVersion: 35.0.0
 
   - name: Example Release
     uses: "marvinpinto/action-automatic-releases@latest"
@@ -108,7 +105,7 @@ signingKey|ANDROID_SIGNING_KEY|**Required.** The base64 encoded signing key used
 keyAlias|ANDROID_KEY_ALIAS|**Required.** The alias of your signing key.
 keyStorePassword|ANDROID_KEYSTORE_PASSWORD|**Required.** The password for your signing keystore.
 keyPassword|ANDROID_KEY_PASSWORD|**Optional.** The private password for your signing key.
-buildToolsVersion|ANDROID_BUILD_TOOLS_VERSION|**Optional.** The version of Android build tools to use. Defaults to `35.0.0`.
+buildToolsVersion|ANDROID_BUILD_TOOLS_VERSION|**Optional.** The version of Android build tools to use. Defaults to Auto Detect.
 
 You can prepare your `signingKey` by running this command:
 
