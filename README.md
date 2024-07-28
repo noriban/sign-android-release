@@ -1,134 +1,56 @@
-# Sign Android Release Action
+<div align="center">
+<h1>Sign Android Release</h1>
+<p>A GitHub action to sign an APK or AAB.</p>
+
+![Workflow](https://img.shields.io/github/actions/workflow/status/NoCrypt/sign-android-release/build.yml?branch=master&style=flat-square)
+[![License](https://img.shields.io/github/license/NoCrypt/sign-android-release?style=flat-square)](https://github.com/NoCrypt/sign-android-release/blob/master/LICENSE)
+
+</div>
+
+---
 
 This action will help you sign an Android `.apk` or `.aab` (Android App Bundle) file for release.
 
-## Inputs
+## Usage
 
-### `releaseDirectory`
-
-**Required:** The relative directory path in your project where your Android release file will be located
-
-### `signingKeyBase64`
-
-**Required:** The base64 encoded signing key used to sign your app
-
-This action will directly decode this input to a file to sign your release with. You can prepare your key by running this command on *nix systems.
-
-```bash
-openssl base64 < some_signing_key.jks | tr -d '\n' | tee some_signing_key.jks.base64.txt
-```
-Then copy the contents of the `.txt` file to your GH secrets
-
-### `alias`
-
-**Required:** The alias of your signing key 
-
-### `keyStorePassword`
-
-**Required:** The password to your signing keystore
-
-### `keyPassword`
-
-**Optional:** The private key password for your signing keystore
-
-## ENV: `BUILD_TOOLS_VERSION`
-
-**Optional:** You can manually specify a version of build-tools to use. We use `34.0.0` by default.
-
-## Outputs
-
-Output variables are set both locally and in environment variables.
-
-### `signedReleaseFile`/ ENV: `SIGNED_RELEASE_FILE`
-
-The path to the single release file that have been signed with this action.
-Not set if several release files have been signed.
-
-### `signedReleaseFiles` / ENV: `SIGNED_RELEASE_FILES`
-
-The paths to the release files that have been signed with this action,
-separated by `:`.
-
-## Example usage
-
-### Single APK
-
-The output variable `signedReleaseFile` can be used in a release action.
-
-```yaml
+```yml
 steps:
-  - uses: noriban/sign-android-release@v5
+  - uses: NoCrypt/sign-android-release@master
     name: Sign app APK
-    # ID used to access action output
     id: sign_app
     with:
-      releaseDirectory: app/build/outputs/apk/release
-      signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-      alias: ${{ secrets.ALIAS }}
-      keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-      keyPassword: ${{ secrets.KEY_PASSWORD }}
-    env:
-      # override default build-tools version (34.0.0) -- optional
-      BUILD_TOOLS_VERSION: "34.0.0"
+      releaseDir: app/build/outputs/apk/release
+      signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
+      keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+      keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      buildToolsVersion: 35.0.0
 
-  # Example use of `signedReleaseFile` output -- not needed
-  - uses: actions/upload-artifact@v2
+  # Upload your signed file if you want
+  - uses: actions/upload-artifact@v3
     with:
       name: Signed app bundle
-      path: ${{steps.sign_app.outputs.signedReleaseFile}}
+      path: ${{steps.sign_app.outputs.signedFile}}
 ```
 
-### Multiple APKs, multiple variables
-
-The output variables `signedReleaseFileX`
-can be used to refer to each signed release file.
+If you have multiple files to sign:
 
 ```yaml
 steps:
-  - uses: noriab/sign-android-release@v5
+  - uses: NoCrypt/sign-android-release@master
     id: sign_app
     with:
-      releaseDirectory: app/build/outputs/apk/release
-      signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-      alias: ${{ secrets.ALIAS }}
-      keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-      keyPassword: ${{ secrets.KEY_PASSWORD }}
+      releaseDir: app/build/outputs/apk/release
+      signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
+      keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+      keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      buildToolsVersion: 35.0.0
 
-  - name: Example Release
-    uses: "marvinpinto/action-automatic-releases@latest"
-    with:
-      repo_token: "${{ secrets.GITHUB_TOKEN }}"
-      automatic_release_tag: "latest"
-      prerelease: true
-      title: "Release X"
-      files: |
-        ${{ steps.sign_app.outputs.signedReleaseFile0 }}
-        ${{ steps.sign_app.outputs.signedReleaseFile1 }}
-        ${{ steps.sign_app.outputs.signedReleaseFile2 }}
-        ${{ steps.sign_app.outputs.signedReleaseFile3 }}
-        ${{ steps.sign_app.outputs.signedReleaseFile4 }}
-```
-
-### Multiple APKs, single variable
-
-The output variable `signedReleaseFiles` must be split first,
-before being used in a release action.
-
-```yaml
-steps:
-  - uses: noriban/sign-android-release@v5
-    id: sign_app
-    with:
-      releaseDirectory: app/build/outputs/apk/release
-      signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-      alias: ${{ secrets.ALIAS }}
-      keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-      keyPassword: ${{ secrets.KEY_PASSWORD }}
-
-  - uses: jungwinter/split@v1
+  - uses: jungwinter/split@v2
     id: signed_files
     with:
-      msg: ${{ steps.sign_app.outputs.signedReleaseFiles }}
+      msg: ${{ steps.sign_app.outputs.signedFiles }}
       separator: ':'
 
   - name: Example Release
@@ -139,9 +61,81 @@ steps:
       prerelease: true
       title: "Release X"
       files: |
-        ${{ steps.signed_files._0 }}
-        ${{ steps.signed_files._1 }}
-        ${{ steps.signed_files._2 }}
-        ${{ steps.signed_files._3 }}
-        ${{ steps.signed_files._4 }}
+        ${{ steps.signed_files.outputs._0 }}
+        ${{ steps.signed_files.outputs._1 }}
+        ${{ steps.signed_files.outputs._2 }}
+        ${{ steps.signed_files.outputs._3 }}
+        ${{ steps.signed_files.outputs._4 }}
 ```
+
+Or you can also do this using `signedFileX`:
+
+```yaml
+steps:
+  - uses: NoCrypt/sign-android-release@master
+    id: sign_app
+    with:
+      releaseDir: app/build/outputs/apk/release
+      signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
+      keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+      keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      buildToolsVersion: 35.0.0
+
+  - name: Example Release
+    uses: "marvinpinto/action-automatic-releases@latest"
+    with:
+      repo_token: "${{ secrets.GITHUB_TOKEN }}"
+      automatic_release_tag: "latest"
+      prerelease: true
+      title: "Release X"
+      files: |
+        ${{ steps.sign_app.outputs.signedFile0 }}
+        ${{ steps.sign_app.outputs.signedFile1 }}
+        ${{ steps.sign_app.outputs.signedFile2 }}
+        ${{ steps.sign_app.outputs.signedFile3 }}
+        ${{ steps.sign_app.outputs.signedFile4 }}
+```
+
+## Inputs
+
+You can set either inputs (in `with` section) or env (in `env` section).
+
+Key|ENV|Usage
+-|-|-
+releaseDir|ANDROID_RELEASE_DIR|**Required.** The relative directory path in your project where your Android release file will be located.<br />Defaults to `app/build/outputs/apk/release`.
+signingKey|ANDROID_SIGNING_KEY|**Required.** The base64 encoded signing key used to sign your app.
+keyAlias|ANDROID_KEY_ALIAS|**Required.** The alias of your signing key.
+keyStorePassword|ANDROID_KEYSTORE_PASSWORD|**Required.** The password for your signing keystore.
+keyPassword|ANDROID_KEY_PASSWORD|**Optional.** The private password for your signing key.
+buildToolsVersion|ANDROID_BUILD_TOOLS_VERSION|**Optional.** The version of Android build tools to use. Defaults to `35.0.0`.
+
+You can prepare your `signingKey` by running this command:
+
+```sh
+openssl base64 < some_signing_key.jks | tr -d '\n' | tee some_signing_key.jks.base64.txt
+```
+
+Then copy the text to `Settings - Secrets - Action` in your account or organization.
+
+## Outputs
+
+Key|ENV|Usage
+-|-|-
+signedFile|ANDROID_SIGNED_FILE|The path to the single release file that have been signed.<br />Not set if multiple release files have been signed.
+signedFiles|ANDROID_SIGNED_FILES|The paths to the release files that have been signed with this action, separated by `:`.
+signedFileX|ANDROID_SIGNED_FILE_X|The paths to the release files that have been signed with this action. The `X` is index number starting from 0. Example: `signedFile0, signedFile1` or `ANDROID_SIGNED_FILE_0`
+signedFilesCount|ANDROID_SIGNED_FILES_COUNT|The count of signed release files.
+
+
+## BUGs & Issues
+
+Feel free to [open issues](https://github.com/NoCrypt/sign-android-release/issues/new).
+
+## Contributions
+
+PRs are welcome! Feel free to contribute on this project.
+
+## LICENSE
+
+[MIT](https://github.com/NoCrypt/sign-android-release/blob/master/LICENSE)
