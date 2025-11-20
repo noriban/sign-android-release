@@ -20,7 +20,7 @@ jobs:
     name: Test action
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         name: Checkout code
 
       - name: Run tests
